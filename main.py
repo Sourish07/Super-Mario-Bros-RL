@@ -1,79 +1,72 @@
 import time
-
+import numpy as np
 import gym_super_mario_bros
+import matplotlib.pyplot as plt
 from gym_super_mario_bros.actions import RIGHT_ONLY
 from nes_py.wrappers import JoypadSpace
-
-import atari_wrappers
-from agent import Agent
-
-from sample_wrappers import wrapper
+from pytorch_agent import Agent
+from wrappers import make_env
 
 # Setting up environment
-env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
+env_name = 'SuperMarioBros-1-1-v0'
+env = gym_super_mario_bros.make(env_name)
 env = JoypadSpace(env, RIGHT_ONLY)
+env = make_env(env)
 
-env = atari_wrappers.MaxAndSkipEnv(env)
-env = atari_wrappers.wrap_deepmind(env, False, True, True, False)
-
-# env = wrapper(env)
-
-state_dimensions = (84, 84, 4)  # Representing four stacked frames, each of size 84 x 84
-num_of_actions = env.action_space.n
-
-agent = Agent(state_dimensions, num_of_actions)
+agent = Agent(env.observation_space.shape,
+              env.action_space.n,
+              env_name=env_name)
 
 # Hyperparameters
-num_of_episodes = 10000
+num_of_episodes = 20000
 
-rewards = []
+scores, steps_array = [], []
 
 load = False
 if load:
-    num_of_episodes = 1
-    agent.load_model()
-    agent.epsilon = 0.5
+    num_of_episodes = 10
+    agent.load_models()
+    agent.epsilon = 0.1
+
+total_steps = 0
 
 for e in range(num_of_episodes):
     start_time = time.time()
-
     state = env.reset()
-
-    total_reward = 0
-    iter = 0
-
+    score = 0
+    num_of_iterations = 0
     done = False
+
     while not done:
         env.render()
-        # if e % 1000 == 0:
-        #     env.render()
-        start_time = time.time()
         action = agent.choose_action(state)
-        print(time.time() - start_time)
 
-        start_time = time.time()
-        next_state, reward, done, info = env.step(action=action)
-        print(f'env step time: {time.time() - start_time}')
+        next_state, reward, done, info = env.step(action)
 
-        start_time = time.time()
-        agent.memory.append((state, next_state, action, reward, done))
-        print(time.time() - start_time)
+        if not load:
+            agent.store_transition(state, action, reward, next_state, done)
+            agent.train()
 
-        start_time = time.time()
-        agent.learn()
-        print(f'agent learn time {time.time() - start_time}')
-
-        start_time = time.time()
-        total_reward += reward
+        score += reward
         state = next_state
-        iter += 1
-        print(time.time() - start_time)
+        num_of_iterations += 1
+        total_steps += 1
 
-    if e % 100 == 0 and e > 0:
-        agent.save_model(e)
+    if (e + 1) % 1000 == 0 and not load:
+        agent.save_models(e + 1)
 
-    rewards.append(total_reward)
+    scores.append(score)
+    steps_array.append(total_steps)
+
+    mean_reward = np.mean(scores[-100:])
 
     end_time = time.time()
-    print(f'----------Episode #{e+1}, Reward: {total_reward}, Time taken: {end_time - start_time}----------')
+    print(f'Episode #{e + 1}, '
+          f'Score: {score}, '
+          f'Number of Iterations: {num_of_iterations}, '
+          f'Mean Reward: {mean_reward}, '
+          f'Epsilon: {np.round(agent.epsilon, 4)}, '
+          f'Time taken: {end_time - start_time}')
 
+plt.plot(steps_array, scores)
+plt.show()
