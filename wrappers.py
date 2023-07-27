@@ -1,7 +1,6 @@
 import gym
 import numpy as np
 import torch
-import torchvision
 from gym.wrappers import GrayScaleObservation, ResizeObservation, FrameStack
 
 
@@ -47,57 +46,6 @@ class SkipFrame(gym.Wrapper):
         return next_state, total_reward, done, trunc, info
     
 
-class MyGrayscaleObservation(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
-        
-        obs_shape = self.observation_space.shape[:2]
-        # self.observation_space.low_repr is the string representation of minimum value in observation space
-        # self.observation_space.low is the array of minimum values of the observation space (it's a bunch of zeros) of shape (240, 256, 3)
-        self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low),
-                                                high=np.min(self.observation_space.high),
-                                                shape=obs_shape,
-                                                dtype=self.observation_space.dtype)
-        
-    def observation(self, observation):
-        # Rearranging the dimensions of the observation from [H, W, C] to [C, H, W]
-        # PyTorch Grayscale expects the input to be [..., 3, H, W]
-        observation = np.transpose(observation, (2, 0, 1))
-        # Converting np array to torch tensor
-        observation = torch.tensor(observation.copy(), dtype=torch.float)
-
-        transform = torchvision.transforms.Grayscale()
-        observation = transform(observation)
-        print("In grayscale, shape after transform:", observation.shape)
-        return observation
-    
-
-class MyResizeObservation(gym.ObservationWrapper):
-    def __init__(self, env, shape):
-        super().__init__(env)
-        # Replacing the height and the width of the observation space with the new shape
-        if isinstance(shape, int):
-            self.shape = (shape, shape)
-        else:
-            self.shape = tuple(shape) # tuple constructor takes in an iterable so the tuple won't have the list or tuple inside it
-        obs_shape = self.shape + self.observation_space.shape[2:]
-        self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low),
-                                                high=np.min(self.observation_space.high),
-                                                shape=obs_shape,
-                                                dtype=self.observation_space.dtype)
-        
-    def observation(self, observation):
-        transforms = torchvision.transforms.Compose([
-            torchvision.transforms.Resize(self.shape),
-            torchvision.transforms.Normalize(0, 255)
-        ])
-        observation = transforms(observation)
-        # Shape after resize is [1, 84, 84]
-        observation = observation.squeeze(0) # Removes the first dimension of the observation if it is 1
-        # Now shape is [84, 84]
-        return observation
-    
-
 class ConvertToTorchTensor(gym.ObservationWrapper):
     def __init__(self, env):
         super().__init__(env)
@@ -105,16 +53,6 @@ class ConvertToTorchTensor(gym.ObservationWrapper):
     def observation(self, observation):
         observation = torch.tensor(observation, dtype=torch.float)
         return observation
-            
-
-class MyFrameStack(gym.ObservationWrapper):
-    def __init__(self, env, num):
-        super().__init__(env)
-        self.observation_space = gym.spaces.Box(low=np.min(self.observation_space.low),
-                                                high=np.min(self.observation_space.high),
-                                                shape=(self.observation_space.shape[0] * num, *self.observation_space.shape[1:]),
-                                                dtype=self.observation_space.dtype)
-        self.frames = deque(maxlen=num)
     
 
 def make_env(env):
