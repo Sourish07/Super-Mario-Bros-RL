@@ -33,12 +33,12 @@ class MaxColor(gym.Wrapper):
 class SkipFrame(gym.Wrapper):
     def __init__(self, env, skip):
         super().__init__(env)
-        self.skip = skip
+        self._skip = skip
     
     def step(self, action):
         total_reward = 0.0
         done = False
-        for _ in range(self.skip):
+        for _ in range(self._skip):
             next_state, reward, done, trunc, info = self.env.step(action)
             total_reward += reward
             if done:
@@ -51,7 +51,9 @@ class ConvertToTorchTensor(gym.ObservationWrapper):
         super().__init__(env)
 
     def observation(self, observation):
-        observation = torch.tensor(observation, dtype=torch.float)
+        # calling __array__() returns a copy of the underlying numpy array in the LazyFrames object (Not exactly sure)
+        # (which is the observation after the FrameStack wrapper is applied)
+        observation = torch.tensor(observation.__array__(), dtype=torch.float)
         return observation
     
 
@@ -60,6 +62,6 @@ def make_env(env):
     env = SkipFrame(env, skip=2) # skipping two frames (total for four frames processes so far)
     env = ResizeObservation(env, shape=84)
     env = GrayScaleObservation(env)
-    env = FrameStack(env, num_stack=4)
-    env = ConvertToTorchTensor(env)
-    return env     
+    env = FrameStack(env, num_stack=4, lz4_compress=True) # May need to change lz4_compress to False if issues arise
+    # env = ConvertToTorchTensor(env)
+    return env
