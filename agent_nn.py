@@ -30,7 +30,6 @@ class AgentNN(torch.nn.Module):
         self.to(self.device)
 
     def forward(self, x):
-        x = torch.tensor(x, dtype=torch.float32).to(self.device)
         return self.network(x)
 
     def _get_conv_out(self, shape):

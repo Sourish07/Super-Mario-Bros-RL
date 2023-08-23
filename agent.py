@@ -25,8 +25,10 @@ class Agent:
     def choose_action(self, observation):
         if np.random.random() < self.epsilon:
             return np.random.choice(self.action_space)
-        observation = torch.tensor(observation, dtype=torch.float32)
-        observation = observation.unsqueeze(0)
+        
+        observation = torch.tensor(observation, dtype=torch.float32) \
+                        .unsqueeze(0) \
+                        .to(self.online_network.device)
         return self.online_network(observation)
     
     def decay_epsilon(self):
