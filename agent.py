@@ -33,7 +33,6 @@ class Agent:
     def choose_action(self, observation):
         if np.random.random() < self.epsilon:
             return np.random.choice(self.action_space)
-        
         # Passing in a list of numpy arrays is slower than creating a tensor from a numpy array
         # Hence the `observation.__array__()` instead of `observation`
         # observation is a list of numpy arrays because of the LazyFrame wrapper
@@ -60,11 +59,23 @@ class Agent:
         if self.learn_step_counter % self.sync_network_rate == 0 and self.learn_step_counter > 0:
             self.target_network.load_state_dict(self.online_network.state_dict())
 
+    def save_model(self, path):
+        torch.save(self.online_network.state_dict(), path)
+
+    def load_model(self, path):
+        self.online_network.load_state_dict(torch.load(path))
+        self.target_network.load_state_dict(torch.load(path))
+
     def learn(self):
         if len(self.replay_buffer) < self.batch_size:
             return
         
         self.sync_networks()
+        if self.learn_step_counter % 10000 == 0 and self.learn_step_counter > 0:
+            self.save_model(f"models/model_{self.learn_step_counter}_iter.pt")
+
+        if self.learn_step_counter % 1000 == 0 and self.learn_step_counter > 0:
+            print("Size of replay buffer:", len(self.replay_buffer))
         
         self.optimizer.zero_grad()
 

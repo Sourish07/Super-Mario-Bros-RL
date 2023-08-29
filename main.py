@@ -8,6 +8,8 @@ from agent import Agent
 from nes_py.wrappers import JoypadSpace
 from wrappers import make_env
 
+import matplotlib.pyplot as plt
+
 # import logging
 # logging.getLogger().setLevel(logging.CRITICAL)
 
@@ -15,8 +17,8 @@ assert torch.cuda.is_available(), "CUDA is not available"
 print(torch.cuda.get_device_name(0))
 
 ENV_NAME = 'SuperMarioBros-1-1-v0'
-DISPLAY = True
-NUM_OF_EPISODES = 3
+DISPLAY = False
+NUM_OF_EPISODES = 10000
 
 env = gym_super_mario_bros.make(ENV_NAME, render_mode='human' if DISPLAY else 'rgb', apply_api_compatibility=True)
 env = JoypadSpace(env, RIGHT_ONLY)
@@ -26,7 +28,7 @@ env = make_env(env)
 # print("env.observation_space.shape", env.observation_space.shape)
 # print("env.action_space.n", env.action_space.n)
 
-agent = Agent(input_dims=env.observation_space.shape, n_actions=env.action_space.n, epsilon=0)
+agent = Agent(input_dims=env.observation_space.shape, n_actions=env.action_space.n)
 
 # print("Action space:", env.action_space, type(env.action_space)) # Action space: Discrete(5) <class 'gym.spaces.discrete.Discrete'>
 
@@ -38,18 +40,27 @@ next_state, reward, done, trunc, info = env.step(action=0)
 # next_state is of type numpy.ndarray, shape: (240, 256, 3),
 print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
 
+rewards = []
+
 for i in range(NUM_OF_EPISODES):
     print("Episode:", i)
     done = False
     state, _ = env.reset()
+    total_reward = 0
     while not done:
         a = agent.choose_action(state)
         new_state, reward, done, truncated, info  = env.step(a)
-        
+        total_reward += reward
+
         agent.store_in_memory(state, a, reward, new_state, done)
         agent.learn()
 
         state = new_state
+    print("Total reward:", total_reward)
+    rewards.append(total_reward)
 
 env.close()
-print(agent.replay_buffer.__len__())
+
+plt.plot(rewards)
+plt.savefig("rewards.png")
+plt.show()
