@@ -7,9 +7,12 @@ from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage, LazyTensorSt
 
 
 class Agent:
-    def __init__(self, input_dims, n_actions, lr=0.0001, gamma=0.99, epsilon=1.0, eps_decay=1e-5, eps_min=0.1, replay_buffer_capacity=100_000, batch_size=32):
+    def __init__(self, input_dims, n_actions, lr=0.0001, gamma=0.99, epsilon=1.0, eps_decay=1e-5, eps_min=0.1, replay_buffer_capacity=100_000, batch_size=32, sync_network_rate=10000):
         self.action_space = [i for i in range(n_actions)]
         
+        self.learn_step_counter = 0
+        self.sync_network_rate = sync_network_rate
+
         self.lr = lr
         self.gamma = gamma
         self.epsilon = epsilon
@@ -33,6 +36,7 @@ class Agent:
         
         # Passing in a list of numpy arrays is slower than creating a tensor from a numpy array
         # Hence the `observation.__array__()` instead of `observation`
+        # observation is a list of numpy arrays because of the LazyFrame wrapper
         # Unqueeze adds a dimension to the tensor, which represents the batch dimension
         observation = torch.tensor(observation.__array__(), dtype=torch.float32) \
                         .unsqueeze(0) \
@@ -44,7 +48,46 @@ class Agent:
         self.epsilon = max(self.epsilon - self.eps_decay, self.eps_min)
 
     def store_in_memory(self, state, action, reward, next_state, done):
-        self.replay_buffer.add(TensorDict({"state": state.__array__(), "action": action, "reward": reward, "next_state": next_state.__array__(), "done": done}, batch_size=[]))
+        self.replay_buffer.add(TensorDict({
+                                            "state": torch.tensor(state.__array__(), dtype=torch.float32).to(self.online_network.device), 
+                                            "action": torch.tensor(action).to(self.online_network.device),
+                                            "reward": torch.tensor(reward).to(self.online_network.device), 
+                                            "next_state": torch.tensor(next_state.__array__(), dtype=torch.float32).to(self.online_network.device), 
+                                            "done": torch.tensor(done).to(self.online_network.device)
+                                          }, batch_size=[]))
+        
+    def sync_networks(self):
+        if self.learn_step_counter % self.sync_network_rate == 0 and self.learn_step_counter > 0:
+            self.target_network.load_state_dict(self.online_network.state_dict())
 
     def learn(self):
-        pass
+        if len(self.replay_buffer) < self.batch_size:
+            return
+        
+        self.sync_networks()
+        
+        self.optimizer.zero_grad()
+
+        samples = self.replay_buffer.sample(self.batch_size)
+
+        states, actions, rewards, next_states, dones = [samples[key] for key in ("state", "action", "reward", "next_state", "done")]
+
+        predicted_rewards = self.online_network(states) # Shape is (batch_size, n_actions)
+        predicted_rewards = predicted_rewards[np.arange(self.batch_size), actions]
+
+        # Max returns two tensors, the first one is the maximum value, the second one is the index of the maximum value
+        target_rewards = self.target_network(next_states).max(dim=1)[0]
+        # The rewards of any future states don't matter if the current state is a terminal state
+        target_rewards = rewards + self.gamma * target_rewards * ~dones
+
+        loss = self.loss(predicted_rewards, target_rewards)
+        loss.backward()
+        self.optimizer.step()
+
+        self.learn_step_counter += 1
+        self.decay_epsilon()
+
+
+        
+
+
