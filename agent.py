@@ -7,7 +7,7 @@ from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage, LazyTensorSt
 
 
 class Agent:
-    def __init__(self, input_dims, n_actions, lr=0.0001, gamma=0.99, epsilon=1.0, eps_decay=1e-5, eps_min=0.1, replay_buffer_capacity=100_000, batch_size=32, sync_network_rate=10000):
+    def __init__(self, input_dims, n_actions, lr=0.0001, gamma=0.99, epsilon=1.0, eps_decay=1e-6, eps_min=0.1, replay_buffer_capacity=100_000, batch_size=32, sync_network_rate=10000):
         self.action_space = [i for i in range(n_actions)]
         
         self.learn_step_counter = 0
@@ -71,11 +71,15 @@ class Agent:
             return
         
         self.sync_networks()
-        if self.learn_step_counter % 10000 == 0 and self.learn_step_counter > 0:
+        if self.learn_step_counter % 25000 == 0 and self.learn_step_counter > 0:
             self.save_model(f"models/model_{self.learn_step_counter}_iter.pt")
-
+ 
         if self.learn_step_counter % 1000 == 0 and self.learn_step_counter > 0:
-            print("Size of replay buffer:", len(self.replay_buffer))
+            with open("log.txt", "a") as f:
+                f.write(f"Size of replay buffer: {len(self.replay_buffer)} \n")
+                f.write(f"Epsilon: {self.epsilon}\n")
+                f.write(f"Learn step counter: {self.learn_step_counter}\n")
+
         
         self.optimizer.zero_grad()
 

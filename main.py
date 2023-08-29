@@ -18,7 +18,7 @@ print(torch.cuda.get_device_name(0))
 
 ENV_NAME = 'SuperMarioBros-1-1-v0'
 DISPLAY = False
-NUM_OF_EPISODES = 10000
+NUM_OF_EPISODES = 10_000
 
 env = gym_super_mario_bros.make(ENV_NAME, render_mode='human' if DISPLAY else 'rgb', apply_api_compatibility=True)
 env = JoypadSpace(env, RIGHT_ONLY)
@@ -43,6 +43,8 @@ print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
 rewards = []
 
 for i in range(NUM_OF_EPISODES):
+    with open("log.txt", "a") as f:
+        f.write("Episode: " + str(i) + "\n")
     print("Episode:", i)
     done = False
     state, _ = env.reset()
@@ -56,6 +58,10 @@ for i in range(NUM_OF_EPISODES):
         agent.learn()
 
         state = new_state
+
+    with open("log.txt", "a") as f:
+        f.write("Total reward: " + str(total_reward) + "\n")
+        f.write("\n\n")
     print("Total reward:", total_reward)
     rewards.append(total_reward)
 
