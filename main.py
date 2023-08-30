@@ -10,6 +10,21 @@ from wrappers import make_env
 
 import matplotlib.pyplot as plt
 
+import os
+
+try:
+    os.mkdir("models")
+except FileExistsError:
+    # delete all files in the models directory
+    for file in os.listdir("models"):
+        os.remove(os.path.join("models", file))
+
+# delete log.txt
+try:
+    os.remove("log.txt")
+except FileNotFoundError:
+    pass
+
 # import logging
 # logging.getLogger().setLevel(logging.CRITICAL)
 
@@ -17,8 +32,10 @@ assert torch.cuda.is_available(), "CUDA is not available"
 print(torch.cuda.get_device_name(0))
 
 ENV_NAME = 'SuperMarioBros-1-1-v0'
+SHOULD_TRAIN = True
 DISPLAY = False
-NUM_OF_EPISODES = 10_000
+NUM_OF_EPISODES = 10000
+
 
 env = gym_super_mario_bros.make(ENV_NAME, render_mode='human' if DISPLAY else 'rgb', apply_api_compatibility=True)
 env = JoypadSpace(env, RIGHT_ONLY)
@@ -30,6 +47,11 @@ env = make_env(env)
 
 agent = Agent(input_dims=env.observation_space.shape, n_actions=env.action_space.n)
 
+if not SHOULD_TRAIN:
+    agent.load_model("models/model_1375000_iter.pt")
+    agent.epsilon = 0.1
+    agent.eps_min = 0.0
+    agent.eps_decay = 0.0
 # print("Action space:", env.action_space, type(env.action_space)) # Action space: Discrete(5) <class 'gym.spaces.discrete.Discrete'>
 
 # print("Observation space:", env.observation_space, type(env.observation_space)) # Observation space: Box(0, 255, (240, 256, 3), uint8) <class 'gym.spaces.box.Box'>
@@ -45,6 +67,7 @@ rewards = []
 for i in range(NUM_OF_EPISODES):
     with open("log.txt", "a") as f:
         f.write("Episode: " + str(i) + "\n")
+    
     print("Episode:", i)
     done = False
     state, _ = env.reset()
@@ -52,16 +75,29 @@ for i in range(NUM_OF_EPISODES):
     while not done:
         a = agent.choose_action(state)
         new_state, reward, done, truncated, info  = env.step(a)
+        
+        if done:
+            with open("log.txt", "a") as f:
+                f.write(f"Info: {info} \n")
+
         total_reward += reward
 
-        agent.store_in_memory(state, a, reward, new_state, done)
-        agent.learn()
+        if SHOULD_TRAIN:
+            agent.store_in_memory(state, a, reward, new_state, done)
+            agent.learn()
 
         state = new_state
 
     with open("log.txt", "a") as f:
         f.write("Total reward: " + str(total_reward) + "\n")
+        f.write("Epsilon: " + str(agent.epsilon) + "\n")
+        f.write("Size of replay buffer: " + str(len(agent.replay_buffer)) + "\n")
+        f.write("Learn step counter: " + str(agent.learn_step_counter) + "\n")
         f.write("\n\n")
+
+    if SHOULD_TRAIN and i % 1000 == 0:
+        agent.save_model("models/model_" + str(i) + "_iter.pt")
+
     print("Total reward:", total_reward)
     rewards.append(total_reward)
 

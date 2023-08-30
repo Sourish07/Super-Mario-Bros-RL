@@ -18,7 +18,6 @@ class Agent:
         self.epsilon = epsilon
         self.eps_decay = eps_decay
         self.eps_min = eps_min
-        print("input_dims", input_dims)
         self.online_network = AgentNN(input_dims, n_actions)
         self.target_network = AgentNN(input_dims, n_actions, freeze=True)
 
@@ -26,7 +25,7 @@ class Agent:
         self.loss = torch.nn.SmoothL1Loss()
         # self.loss = torch.nn.MSELoss()
 
-        storage = ListStorage(replay_buffer_capacity) # , device=self.online_network.device
+        storage = LazyMemmapStorage(replay_buffer_capacity)
         self.replay_buffer = TensorDictReplayBuffer(storage=storage)
         self.batch_size = batch_size
 
@@ -48,11 +47,11 @@ class Agent:
 
     def store_in_memory(self, state, action, reward, next_state, done):
         self.replay_buffer.add(TensorDict({
-                                            "state": torch.tensor(state.__array__(), dtype=torch.float32).to(self.online_network.device), 
-                                            "action": torch.tensor(action).to(self.online_network.device),
-                                            "reward": torch.tensor(reward).to(self.online_network.device), 
-                                            "next_state": torch.tensor(next_state.__array__(), dtype=torch.float32).to(self.online_network.device), 
-                                            "done": torch.tensor(done).to(self.online_network.device)
+                                            "state": torch.tensor(state.__array__(), dtype=torch.float32), 
+                                            "action": torch.tensor(action),
+                                            "reward": torch.tensor(reward), 
+                                            "next_state": torch.tensor(next_state.__array__(), dtype=torch.float32), 
+                                            "done": torch.tensor(done)
                                           }, batch_size=[]))
         
     def sync_networks(self):
@@ -71,29 +70,22 @@ class Agent:
             return
         
         self.sync_networks()
-        if self.learn_step_counter % 25000 == 0 and self.learn_step_counter > 0:
-            self.save_model(f"models/model_{self.learn_step_counter}_iter.pt")
- 
-        if self.learn_step_counter % 1000 == 0 and self.learn_step_counter > 0:
-            with open("log.txt", "a") as f:
-                f.write(f"Size of replay buffer: {len(self.replay_buffer)} \n")
-                f.write(f"Epsilon: {self.epsilon}\n")
-                f.write(f"Learn step counter: {self.learn_step_counter}\n")
-
         
         self.optimizer.zero_grad()
 
-        samples = self.replay_buffer.sample(self.batch_size)
+        samples = self.replay_buffer.sample(self.batch_size).to(self.online_network.device)
 
-        states, actions, rewards, next_states, dones = [samples[key] for key in ("state", "action", "reward", "next_state", "done")]
+        keys = ("state", "action", "reward", "next_state", "done")
+
+        states, actions, rewards, next_states, dones = [samples[key] for key in keys]
 
         predicted_rewards = self.online_network(states) # Shape is (batch_size, n_actions)
-        predicted_rewards = predicted_rewards[np.arange(self.batch_size), actions]
+        predicted_rewards = predicted_rewards[np.arange(self.batch_size), actions.squeeze()]
 
         # Max returns two tensors, the first one is the maximum value, the second one is the index of the maximum value
         target_rewards = self.target_network(next_states).max(dim=1)[0]
         # The rewards of any future states don't matter if the current state is a terminal state
-        target_rewards = rewards + self.gamma * target_rewards * ~dones
+        target_rewards = rewards + self.gamma * target_rewards * (1 - dones.float())
 
         loss = self.loss(predicted_rewards, target_rewards)
         loss.backward()
