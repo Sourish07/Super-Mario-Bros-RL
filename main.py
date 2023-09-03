@@ -11,6 +11,7 @@ from wrappers import make_env
 import matplotlib.pyplot as plt
 
 import os
+from timer import Timer
 
 try:
     os.mkdir("models")
@@ -63,6 +64,8 @@ next_state, reward, done, trunc, info = env.step(action=0)
 print(f"{next_state.shape},\n {reward},\n {done},\n {info}")
 
 rewards = []
+timer = Timer()
+timer.start()
 
 for i in range(NUM_OF_EPISODES):
     with open("log.txt", "a") as f:
@@ -95,14 +98,18 @@ for i in range(NUM_OF_EPISODES):
         f.write("Learn step counter: " + str(agent.learn_step_counter) + "\n")
         f.write("\n\n")
 
-    if SHOULD_TRAIN and i % 1000 == 0:
-        agent.save_model("models/model_" + str(i) + "_iter.pt")
+    if SHOULD_TRAIN and (i + 1) % 1000 == 0:
+        agent.save_model("models/model_" + str(i + 1) + "_iter.pt")
 
     print("Total reward:", total_reward)
     rewards.append(total_reward)
 
 env.close()
+print("Total time taken:", timer.get())
+
+average_reward = sum(rewards) / len(rewards)
+print("Average reward:", average_reward)
 
 plt.plot(rewards)
 plt.savefig("rewards.png")
-plt.show()
+# plt.show()
