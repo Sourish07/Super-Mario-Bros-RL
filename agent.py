@@ -7,7 +7,18 @@ from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage, LazyTensorSt
 
 
 class Agent:
-    def __init__(self, input_dims, n_actions, lr=0.00025, gamma=0.9, epsilon=1.0, eps_decay=1e-6, eps_min=0.1, replay_buffer_capacity=100_000, batch_size=32, sync_network_rate=10000):
+    def __init__(self, 
+                 input_dims, 
+                 n_actions, 
+                 lr=0.00025, 
+                 gamma=0.9, 
+                 epsilon=1.0, 
+                 eps_decay=0.99999975, 
+                 eps_min=0.1, 
+                 replay_buffer_capacity=100_000, 
+                 batch_size=32, 
+                 sync_network_rate=10000):
+        
         self.action_space = [i for i in range(n_actions)]
         
         self.learn_step_counter = 0
@@ -43,7 +54,7 @@ class Agent:
         return self.online_network(observation).argmax().item()
     
     def decay_epsilon(self):
-        self.epsilon = max(self.epsilon - self.eps_decay, self.eps_min)
+        self.epsilon = max(self.epsilon * self.eps_decay, self.eps_min)
 
     def store_in_memory(self, state, action, reward, next_state, done):
         self.replay_buffer.add(TensorDict({
