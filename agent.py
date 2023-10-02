@@ -99,6 +99,7 @@ class Agent:
         # Max returns two tensors, the first one is the maximum value, the second one is the index of the maximum value
         target_q_values = self.target_network(next_states).max(dim=1)[0]
         # The rewards of any future states don't matter if the current state is a terminal state
+        # If done is true, then 1 - done is 0, so the part after the plus sign (representing the future rewards) is 0
         target_q_values = rewards + self.gamma * target_q_values * (1 - dones.float())
 
         loss = self.loss(predicted_q_values, target_q_values)
