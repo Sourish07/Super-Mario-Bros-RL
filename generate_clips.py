@@ -45,7 +45,7 @@ def apply_wrappers(env):
 
 
 ENV_NAME = 'SuperMarioBros-1-1-v0'
-NUM_OF_EPISODES = 50000
+NUM_OF_EPISODES = 1_000
 controllers = [Image.open(f"controllers/{i}.png") for i in range(5)]
 
 env = gym_super_mario_bros.make(ENV_NAME, render_mode='rgb_array', apply_api_compatibility=True)
@@ -54,7 +54,7 @@ env = apply_wrappers(env)
 
 agent = Agent(input_dims=env.observation_space.shape, num_actions=env.action_space.n)
 
-# agent.load_model("models/folder_name/model_80000_iter.pt")
+# agent.load_model("models/folder_name/ckpt_name")
 
 for i in range(NUM_OF_EPISODES):
     done = False
@@ -66,16 +66,16 @@ for i in range(NUM_OF_EPISODES):
         new_state, reward, done, truncated, info  = env.step(action)
         rewards += reward
 
-        agent.store_in_memory(state, action, reward, new_state, done)
-        agent.learn()
+        # agent.store_in_memory(state, action, reward, new_state, done)
+        # agent.learn()
 
         state = new_state
 
         if done:
             print(f"Episode: {i}, Reward: {rewards}")
             if info["flag_get"]:
-                os.makedirs(f"games/game_{i}", exist_ok=True)
-                frame_skip_env = env.env.env.env
+                os.makedirs(os.path.join("games" f"game_{i}"), exist_ok=True)
+                frame_skip_env = env.env.env.env # Unwrapping the environment to get the SkipFrame wrapper
                 frames_log = frame_skip_env.frames_log
                 actions_log = frame_skip_env.actions_log
                 for j, (frame, action) in enumerate(zip(frames_log, actions_log)):
@@ -83,12 +83,19 @@ for i in range(NUM_OF_EPISODES):
                     scaling_factor = 10
                     new_dims = (frame.shape[1] * scaling_factor, frame.shape[0] * scaling_factor)
                     frame = Image.fromarray(frame).resize(new_dims, Image.NEAREST)
-                    frame.save(f"games/game_{i}/frame_{j}.png")
 
-                    controllers[action].save(f"games/game_{i}/controller_{j}.png")
+                    frame.save(os.path.join("games" f"game_{i}", f"frame_{j}.png"))
+                    controllers[action].save(os.path.join("games" f"game_{i}", f"controller_{j}.png"))
         
-        if i % 5000 == 0 and i > 0:
-            agent.save_model(f"models_mse_loss/model_{i}_iter.pt")
+        # if i % 5000 == 0 and i > 0:
+        #     agent.save_model(os.path.join("models", f"model_{i}_iter.pt"))
 
 env.close()
 
+# Bash commands to convert frames to video (Assuming you're in the games folder)
+
+# Video game frames
+# ffmpeg -framerate 60 -i frame_%d.png game.mp4
+
+# Controller frames (For transparent background)
+# ffmpeg -framerate 60 -i controller_%d.png -c:v prores_ks -profile:v 4444 -pix_fmt yuva444p10le -alpha_bits 16 controller.mov
