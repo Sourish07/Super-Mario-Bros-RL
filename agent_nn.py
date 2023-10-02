@@ -5,6 +5,7 @@ import numpy as np
 class AgentNN(nn.Module):
     def __init__(self, input_shape, n_actions, freeze=False):
         super().__init__()
+        # Conolutional layers
         self.conv_layers = nn.Sequential(
             nn.Conv2d(input_shape[0], 32, kernel_size=8, stride=4),
             nn.ReLU(),
@@ -16,6 +17,7 @@ class AgentNN(nn.Module):
 
         conv_out_size = self._get_conv_out(input_shape)
 
+        # Linear layers
         self.network = nn.Sequential(
             self.conv_layers,
             nn.Flatten(),

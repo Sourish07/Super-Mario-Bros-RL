@@ -19,7 +19,7 @@ class SkipFrame(Wrapper):
         return next_state, total_reward, done, trunc, info
     
 
-def make_env(env):
+def apply_wrappers(env):
     env = SkipFrame(env, skip=4) # Num of frames to apply one action to
     env = ResizeObservation(env, shape=84) # Resize frame from 240x256 to 84x84
     env = GrayScaleObservation(env)
