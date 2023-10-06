@@ -15,8 +15,10 @@ from utils import *
 model_path = os.path.join("models", get_current_date_time_string())
 os.makedirs(model_path, exist_ok=True)
 
-assert torch.cuda.is_available(), "CUDA is not available"
-print("Using CUDA device:", torch.cuda.get_device_name(0))
+if torch.cuda.is_available():
+    print("Using CUDA device:", torch.cuda.get_device_name(0))
+else:
+    print("CUDA is not available")
 
 ENV_NAME = 'SuperMarioBros-1-1-v0'
 SHOULD_TRAIN = True
