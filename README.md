@@ -26,18 +26,18 @@ Make sure you activate the environment.
 conda activate smbrl
 ```
 
-**Then, install PyTorch v2.0.1**
+**Then, install PyTorch v2.1.1**
 
-The steps here will be a little different for everyone depending on if you're using a GPU or not. This is why the PyTorch lines in the requirements.txt file are commented out. 
+The steps here will be a little different for everyone depending on if you're using a GPU or not. This is why the PyTorch lines in the requirements.txt file are commented out.
 
-If you are using a GPU, it also depends on what version of CUDA you're using (assuming you're using an NVIDIA card). I'm using CUDA 11.8, so I have to go to PyTorch's website and then install PyTorch v2.0.1 for CUDA version 11.8.
+If you are using a GPU, it also depends on what version of CUDA you're using (assuming you're using an NVIDIA card). I'm using CUDA 12.1, so I have to go to PyTorch's website and then install PyTorch v2.1.1 for CUDA version 12.1.
 
-For more information, please go to [PyTorch's website](https://pytorch.org/).
+For more information, please go to [PyTorch's website](https://pytorch.org/get-started/locally/).
 
 My command looked like:
 
 ```bash
-pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
 **Finally, install the rest of the requirements**
