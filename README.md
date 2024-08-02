@@ -6,13 +6,13 @@ Watch the accompanying YouTube video [here](https://youtu.be/_gmQZToTMac)! Hope 
 
 ## Installation
 
-**First, clone this repository**
+### First, clone this repository
 
 ```bash
 git clone https://github.com/Sourish07/Super-Mario-Bros-RL.git
 ```
 
-**Next, create a virtual environment**
+### Next, create a virtual environment
 
 The command below is for a conda environment, but use whatever you're comfortable with. I'm using Python 3.10.12.
 
@@ -26,9 +26,24 @@ Make sure you activate the environment.
 conda activate smbrl
 ```
 
-**Then, install PyTorch v2.1.1**
+### Finally, install dependencies
 
-The steps here will be a little different for everyone depending on if you're using a GPU or not. This is why the PyTorch lines in the requirements.txt file are commented out.
+```bash
+cd Super-Mario-Bros-RL
+pip install -r requirements.txt
+```
+
+### Check if PyTorch is GPU accelerated
+
+If the following command in your terminal with the virtual environment activated returns `True`, then PyTorch is GPU accelerated.
+
+```bash
+python -c "import torch; print(torch.cuda.is_available())"
+```
+
+### If issues with GPU support arise, manually install PyTorch v2.1.1
+
+The steps here will be a little different for everyone depending on if you're using a GPU or not.
 
 If you are using a GPU, it also depends on what version of CUDA you're using (assuming you're using an NVIDIA card). I'm using CUDA 12.1, so I have to go to PyTorch's website and then install PyTorch v2.1.1 for CUDA version 12.1.
 
@@ -38,10 +53,4 @@ My command looked like:
 
 ```bash
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
-
-**Finally, install the rest of the requirements**
-
-```bash
-pip install -r requirements.txt
 ```
