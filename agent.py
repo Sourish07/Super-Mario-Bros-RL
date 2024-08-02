@@ -100,8 +100,9 @@ class Agent:
 
         keys = ("state", "action", "reward", "next_state", "done")
 
-        states, actions, rewards, next_states, dones = [samples[key] for key in keys]
-
+        states, actions, rewards, next_states, dones = [
+            samples[key].to(self.device) for key in keys
+        ]
         predicted_q_values = self.online_network(
             states
         )  # Shape is (batch_size, n_actions)
