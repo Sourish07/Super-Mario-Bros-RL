@@ -37,10 +37,10 @@ requests==2.28.1
 six==1.16.0
 sympy==1.11.1
 tensordict==0.2.1
-# torch==2.1.1+cu121
-# torchaudio==2.1.1+cu121
+torch==2.1.1
+torchaudio==2.1.1
 torchrl==0.2.1
-# torchvision==0.16.1+cu121
+torchvision==0.16.1
 tqdm==4.66.1
 typing_extensions==4.4.0
 urllib3==1.26.13
