@@ -32,9 +32,10 @@ for i in range(NUM_OF_EPISODES):
 
     total_reward, _ = eval_run(agent, device=device)
     logging.info(
-        "Episode: %d, Total reward: %d, Epsilon: %f, Replay buffer size: %d",
+        "Episode: %d, Total reward: %d, Agent learn step counter: %d, Epsilon: %f, Replay buffer size: %d",
         i,
         total_reward,
+        agent.learn_step_counter,
         agent.epsilon,
         len(agent.replay_buffer),
     )
